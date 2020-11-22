@@ -1,6 +1,7 @@
 
 import sys
-from argparse import ArgumentParser, Action
+import argparse
+
 import importlib
 
 class NoSuchCommandError(Exception):
@@ -28,11 +29,22 @@ class Command(object):
     epilog = None
     usage = None
 
+    formatter_class = argparse.ArgumentDefaultsHelpFormatter
+
+    # Useful for suppressing defaults in parameters
+    SUPPRESS = argparse.SUPPRESS
+
     def build_parser(self):
 
         # Return an argument parser
 
-        p = ArgumentParser(description=self.description, epilog=self.epilog, usage=self.usage)
+        p = argparse.ArgumentParser(
+            description=self.description,
+            epilog=self.epilog,
+            usage=self.usage,
+            formatter_class=self.formatter_class
+        )
+
         p.set_defaults(_action=self.run)
         self.add_options(p)
         return p
@@ -151,7 +163,7 @@ def resolve(name):
 
     return target
 
-class add_to_set(Action):
+class add_to_set(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         try:
