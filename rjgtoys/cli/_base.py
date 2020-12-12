@@ -13,6 +13,7 @@ from rjgtoys.yaml import yaml_load, yaml_load_path
 
 __all__ = (
     'Command', 'Tool',
+    'CommaList',
     'NoSuchCommandError',
     'IncompleteCommandError',
     'SpecificationError',
@@ -47,6 +48,40 @@ class HelpNeeded(Exception):
 
     pass
 
+
+class CommaList(argparse.Action):
+    """An action that allows an option to be used to specify multiple values,
+    either as a comma-separated list, or by using the option multiple times,
+    or a combination of those.
+    """
+
+    separator = ','
+
+    def __call__(self, parser, ns, value, option_string=None):
+
+        current = getattr(ns, self.dest) or []
+
+        value = self._split(value)
+
+        current.extend(value)
+
+        setattr(ns, self.dest, current)
+
+    def _split(self, value):
+        """Separate the parts of value."""
+
+        value = [v.strip() for v in value.split(self.separator)]
+
+        value = [self._check(v) for v in value if v]
+
+        return value
+
+    def _check(self, value):
+        """Check and if necessary convert the value to the desired type."""
+
+        return value
+
+
 class Command(object):
     """
     Base for command parsers/actions
@@ -73,14 +108,24 @@ class Command(object):
         )
 
         p.set_defaults(_action=self.run)
-        self.add_options(p)
+        self.add_arguments(p)
         return p
 
-    def add_options(self,p):
-        return p
+    def add_arguments(self,p):
+        return self.add_options(p)
+
+    def add_options(self, p):
+        """Deprecated old name for add_arguments."""
+        pass
+
+    def check_arguments(self, args):
+        return self.check_options(args)
 
     def check_options(self,opts):
         pass
+
+    def handle_arguments(self, args):
+        return self.handle_options(args)
 
     def handle_options(self,opts):
         pass
@@ -88,20 +133,20 @@ class Command(object):
     def parse_args(self,argv=None):
         p = self.build_parser()
 
-        opts = p.parse_args(argv)
-        return opts
+        args = p.parse_args(argv)
+        return args
 
     def main(self, argv=None):
-        opts = self.parse_args(argv)
-        self.check_options(opts)
+        args = self.parse_args(argv)
+        self.check_arguments(args)
         try:
-            self.handle_options(opts)
-            return opts._action(opts) or 0
+            self.handle_arguments(args)
+            return args._action(args) or 0
         except HelpNeeded as help:
             print(str(help))
             return 0
 
-    def run(self,opts):
+    def run(self, args):
         pass
 
 class Tool(object):
