@@ -1,8 +1,15 @@
+"""
+Most of the CLI core is here.
+
+"""
 
 import sys
 import argparse
 
 import importlib
+
+from rjgtoys.yaml import yaml_load, yaml_load_path
+
 
 class NoSuchCommandError(Exception):
     pass
@@ -82,6 +89,76 @@ class Tool(object):
     def __init__(self, commands):
 
         self.cmds = sorted((p.split(' '),p,c) for (p,c) in commands)
+
+    @classmethod
+    def from_yaml(cls, text=None, path=None):
+        """Create a tool definition from some yaml."""
+
+        spec = cls.spec_from_yaml(text=text, path=path)
+
+        return cls(spec)
+
+    @classmethod
+    def spec_from_yaml(cls, text=None, path=None):
+        if None not in (text, path):
+            raise ValueError("Tool specification may be text or path, not both")
+
+        data = None
+        if path:
+            data = yaml_load_path(path)
+        elif text:
+            data = yaml_load(text)
+
+        if not data:
+            raise ValueError("Tool specification is missing")
+
+        # Reduce the spec to something usable by the constructor
+
+        """
+        Example:
+
+          _package: path.to.package:
+          _title: Name of this group
+          _description: |
+            Longer description of this command group
+          # Other keys define commands by naming the class that implements each
+          word-or-phrase: name-of-class
+          # Or by defining subcommands, using a nested structure:
+          word-or-phrase:
+             _package: optional
+             _title: optional
+             _description: optional
+             word-or-phrase: module.suffix
+
+        """
+
+        return cls._parse_spec(data)
+
+    @classmethod
+    def _parse_spec(cls, data):
+        yield from cls._parse_part('', tuple(), data)
+
+    @classmethod
+    def _parse_part(cls, namespace, tokens, data):
+        try:
+            # Don't leave a leading '.' on this.
+            namespace = (namespace + '.' + data._package).lstrip('.')
+        except AttributeError:
+            pass
+
+        for (phrase, body) in data.items():
+            if phrase.startswith('_'):
+                continue
+            tokens = tokens + (phrase,)
+            try:
+                if isinstance(body, str):
+                    yield (' '.join(tokens), namespace + '.' + body)
+                    continue
+                assert isinstance(body, dict)
+
+                yield from cls._parse_part(namespace, tokens, body)
+            finally:
+                tokens = tokens[:-1]
 
     def do_help(self,possible=None):
         if possible is None:
