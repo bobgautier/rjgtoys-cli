@@ -5,11 +5,19 @@ Most of the CLI core is here.
 
 import sys
 import argparse
+from collections import defaultdict
 
 import importlib
 
 from rjgtoys.yaml import yaml_load, yaml_load_path
 
+__all__ = (
+    'Command', 'Tool',
+    'NoSuchCommandError',
+    'IncompleteCommandError',
+    'SpecificationError',
+    'HelpNeeded'
+    )
 
 class NoSuchCommandError(Exception):
     pass
@@ -17,6 +25,18 @@ class NoSuchCommandError(Exception):
 
 class IncompleteCommandError(Exception):
     pass
+
+
+class SpecificationError(Exception):
+
+    def __init__(self, errors):
+        errs = []
+
+        for (phrase, impls) in errors:
+            impls = ",".join(impls)
+            errs.append(f"'{phrase}' implemented by [{impls}]")
+
+        super().__init__(f"Specification error (ambiguous): {errs}")
 
 
 class HelpNeeded(Exception):
@@ -132,11 +152,41 @@ class Tool(object):
 
         """
 
-        return cls._parse_spec(data)
+        return cls.spec_from_dict(data)
 
     @classmethod
-    def _parse_spec(cls, data):
+    def spec_from_dict(cls, data):
+
+        spec = list(cls._spec_from_dict(data))
+
+        return cls.validate_spec(spec)
+
+    @classmethod
+    def _spec_from_dict(cls, data):
         yield from cls._parse_part('', tuple(), data)
+
+    @classmethod
+    def validate_spec(cls, spec):
+
+        errors = list(cls._spec_errors(spec))
+
+        if errors:
+            raise SpecificationError(errors)
+
+        return spec
+
+    @classmethod
+    def _spec_errors(cls, spec):
+        """Generate a sequence of all errors found in a spec."""
+
+        targets = defaultdict(set)
+
+        for (phrase, impl) in spec:
+            targets[phrase].add(impl)
+
+        for (phrase, impls) in targets.items():
+            if len(impls) > 1:
+                yield (phrase, impls)
 
     @classmethod
     def _parse_part(cls, namespace, tokens, data):

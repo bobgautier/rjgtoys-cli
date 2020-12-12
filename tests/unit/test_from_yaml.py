@@ -2,7 +2,9 @@
 Tests for the yaml spec stuff.
 """
 
-from rjgtoys.cli import Tool
+import pytest
+
+from rjgtoys.cli import Tool, SpecificationError
 
 def test_yaml_parsing():
     """Basic spec parsing works."""
@@ -55,3 +57,27 @@ def test_yaml_constructor():
         (['first'], 'first', 'tests.unit.cmd1'),
         (['second'], 'second', 'tests.unit.cmd2')
         ]
+
+
+def test_spec_validation():
+    """An invalid spec is spotted."""
+
+    # This is fine - redundant but not ambiguous:
+
+    spec = Tool.spec_from_yaml("""
+        _package: testing
+        first command: impl
+        first:
+          command: impl
+        """)
+
+    # This is ambiguous:
+
+    with pytest.raises(SpecificationError):
+        spec = Tool.spec_from_yaml("""
+        _package: testing
+        first command: impl
+        first:
+          command: other
+        """)
+
