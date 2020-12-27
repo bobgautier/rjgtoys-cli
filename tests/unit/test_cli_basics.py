@@ -9,7 +9,7 @@ class TargetCommand(Command):
 
     description = "A command for testing"
 
-    def add_options(self,p):
+    def add_arguments(self,p):
         p.add_argument('--test',help="Do test",
             action="store_true", default=False)
         p.add_argument('--value',help="Value",
@@ -24,7 +24,7 @@ class TryCommand(Command):
 
     description = "A command for trying"
 
-    def add_options(self,p):
+    def add_arguments(self,p):
         p.add_argument('--tryout',help="Try it",
             action="store_true", default=False)
 

@@ -98,8 +98,47 @@ your users: provide them with a set of command implementations, and
 a default bit of YAML to be starting with, and they can pick and choose
 which commands they need available, and what they'd like to call them.
 
-The :class:`rjgtoys.cli.examples.goodbye.GoodbyeCommand` code
--------------------------------------------------------------
+Sharing option definitions amongst commands
+-------------------------------------------
+
+In the example above, the two commands, :class:`~rjgtoys.cli.examples.hello.HelloCommand`
+and :class:`~rjgtoys.cli.examples.goodbye.GoodbyeCommand` are very similar, and
+in particular they both accept a ``--name`` option.
+
+Repetition of the code to parse the option should be avoided, and in this case
+it's pretty easy to do that by creating a common base class which both
+command classes inherit.
+
+But that approach really only works if both commands accept the same set of options.
+
+:mod:`rjgtoys.cli` provides another mechanism that allows parts of the command
+line parser to be defined as reusable functions, and selected for use by
+command classes, so they can 'cherry pick' the arguments that are appropriate,
+but always get a consistent definition of each argument that they use.
+
+The process starts with a base class, which defines method(s) to build the
+parser.   Each method has a name like ``_arg_FOO``, where ``FOO`` is the name
+by which the method will be referenced by subclasses.   Each such method may
+add any number of arguments, subparsers, or anything else to the parser.
+
+Here's a possible superclass for new versions of the 'hello' and 'goodbye'
+commands:
+
+.. literalinclude:: ../../rjgtoys/cli/examples/greetbase.py
+
+Each subclass can declare the list of parser building methods to call,
+by setting an attribute (usually a class attribute) called :attr:`arguments`.
+
+The value of :attr:`arguments` may be either a string, in which it is expected
+to contain a comma-separated list of the argument generating methods to be called,
+or it may be any other kind of iterable that produces a sequence of method names.
+
+Here is the new tool script, using the :attr:`arguments` mechanism:
+
+.. literalinclude:: ../../rjgtoys/cli/examples/greeters.py
+
+Appendix: The :class:`rjgtoys.cli.examples.goodbye.GoodbyeCommand` code
+-----------------------------------------------------------------------
 
 Here is the code for the 'say goodbye' command:
 

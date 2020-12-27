@@ -1,5 +1,42 @@
 """
-Most of the CLI core is here.
+
+The :class:`~rjgtoys.cli.Command` base class
+--------------------------------------------
+
+.. autoclass:: Command
+   :members:  add_arguments, run
+
+   .. automethod:: build_parser
+
+Parser building methods and the :attr:`arguments` attribute
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Describe the ``_arg__`` mechanism here.
+
+The :class:`~rjgtoys.cli.Tool` base class
+-----------------------------------------
+
+.. autoclass:: Tool
+
+The YAML tool specification language
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Don't forget to describe the YAML specification language
+
+Argument Actions
+----------------
+
+These implement the :class:`argparse.Action` interface, and can therefore
+be passed as the ``action`` parameter to :meth:`argparse.ArgumentParser.add_argument`
+
+.. autoclass:: CommaList
+.. autoclass:: add_to_set
+
+Exceptions
+----------
+
+.. autoexception:: HelpNeeded
+.. autoexception:: SpecificationError
 
 """
 
@@ -14,6 +51,7 @@ from rjgtoys.yaml import yaml_load, yaml_load_path
 __all__ = (
     'Command', 'Tool',
     'CommaList',
+    'add_to_set',
     'SpecificationError',
     'HelpNeeded'
     )
@@ -75,7 +113,28 @@ class CommaList(argparse.Action):
 
 class Command(object):
     """
-    Base for command parsers/actions
+    This is the base class for command actions.
+
+    Each command subclass should override some of the
+    following:
+
+    :py:attr:`description` (:class:`str`)
+      A one-line short description of what the command does.
+
+    :py:attr:`epilog` (:class:`str`)
+      A 'tail' for the help text of the command.
+
+    :py:attr:`usage` (:class:`str`)
+      A longer description of how to use the command.
+
+    :py:attr:`formatter_class` (`argparse formatter class`) = :class:`argparse.ArgumentDefaultsHelpFormatter`
+      The class to be used to format help for this command.
+
+    :py:attr:`arguments` (:class:`str or iterable`)
+      Either an iterable producing a sequence of parser-building method names, or
+      a string containing a comma-separated list of parser-building method names.
+
+
     """
     description = None
 
@@ -83,6 +142,8 @@ class Command(object):
     usage = None
 
     formatter_class = argparse.ArgumentDefaultsHelpFormatter
+
+    arguments = ()
 
     # Useful for suppressing defaults in parameters
     SUPPRESS = argparse.SUPPRESS
@@ -106,23 +167,29 @@ class Command(object):
         self.add_arguments(p)
         return p
 
-    def add_arguments(self,p):
-        return self.add_options(p)
+    def add_arguments(self, p):
+        """Add arguments to the parser for this command.
 
-    def add_options(self, p):
-        """Deprecated old name for add_arguments."""
-        pass
+        The default implementation uses the :py:attr:`arguments`
+        attribute to produce a list of 'argument factories' to
+        invoke.
+        """
+
+        args = self.arguments
+        if isinstance(args, str):
+            args = args.split(',')
+
+        for argname in args:
+            argname = argname.strip()
+            if not argname:
+                continue
+            action = getattr(self, '_arg_'+argname)
+            action(p)
 
     def check_arguments(self, args):
-        return self.check_options(args)
-
-    def check_options(self,opts):
         pass
 
     def handle_arguments(self, args):
-        return self.handle_options(args)
-
-    def handle_options(self,opts):
         pass
 
     def parse_args(self,argv=None):
@@ -142,7 +209,10 @@ class Command(object):
             return 0
 
     def run(self, args):
+        """This performs the command action, and should be overridden by subclasses."""
+
         pass
+
 
 class Tool(object):
 
@@ -261,6 +331,7 @@ class Tool(object):
             try:
                 desc = resolve(c).description
             except Exception as e:
+                raise
                 desc = "BUG: %s" % (e)
 
             print("  %s - %s" % (p.ljust(w), desc))
@@ -365,6 +436,7 @@ class add_to_set(argparse.Action):
             v.update(values)
         else:
             v.add(values)
+
 
 class splitlist(object):
 
