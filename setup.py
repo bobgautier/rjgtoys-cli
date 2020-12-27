@@ -7,10 +7,10 @@ except ImportError:
 
 setup(
     name = "rjgtoys-cli",
-    version = "0.0.2",
+    version = "0.0.3",
     author = "Robert J. Gautier",
     author_email = "bob.gautier@gmail.com",
-    url = "https://github.com/bobgautier/rjgtoys-CLI",
+    url = "https://github.com/bobgautier/rjgtoys-cli",
     description = ("Command-line tool components"),
     namespace_packages=['rjgtoys'],
     packages = ['rjgtoys','rjgtoys.cli'],

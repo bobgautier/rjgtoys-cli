@@ -1,11 +1,11 @@
 
-from rjgtoys.cli import Command, Tool, NoSuchCommandError, IncompleteCommandError
+from rjgtoys.cli import Command, Tool
 from rjgtoys.cli._base import resolve
 
 import pytest
 import os
 
-class TestCommand(Command):
+class TargetCommand(Command):
 
     description = "A command for testing"
 
@@ -33,7 +33,7 @@ class TryCommand(Command):
 
 def test_command_basics():
 
-    cmd = TestCommand()
+    cmd = TargetCommand()
 
     opts = cmd.parse_args([])
 
@@ -49,10 +49,29 @@ def test_command_basics():
 
     assert cmd.result == 39
 
+
+class NoSuchCommandError(Exception):
+    pass
+
+
+class IncompleteCommandError(Exception):
+    pass
+
+
+class RaisingTool(Tool):
+    """Override the help generators so we can easily check they were called."""
+
+    def handle_unrecognised(self, prefix, possible):
+        raise NoSuchCommandError
+
+    def handle_incomplete(self, prefix, possible):
+        raise IncompleteCommandError
+
+
 def test_tool_basics():
 
-    t = Tool((
-        ('test',TestCommand),
+    t = RaisingTool((
+        ('test',TargetCommand),
         ('try this',TryCommand),
         ))
 

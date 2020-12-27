@@ -14,18 +14,9 @@ from rjgtoys.yaml import yaml_load, yaml_load_path
 __all__ = (
     'Command', 'Tool',
     'CommaList',
-    'NoSuchCommandError',
-    'IncompleteCommandError',
     'SpecificationError',
     'HelpNeeded'
     )
-
-class NoSuchCommandError(Exception):
-    pass
-
-
-class IncompleteCommandError(Exception):
-    pass
 
 
 class SpecificationError(Exception):
@@ -96,11 +87,15 @@ class Command(object):
     # Useful for suppressing defaults in parameters
     SUPPRESS = argparse.SUPPRESS
 
+    def __init__(self, name=None):
+        self._name = name
+
     def build_parser(self):
 
         # Return an argument parser
 
         p = argparse.ArgumentParser(
+            self._name,
             description=self.description,
             epilog=self.epilog,
             usage=self.usage,
@@ -247,7 +242,7 @@ class Tool(object):
             tokens = tokens + (phrase,)
             try:
                 if isinstance(body, str):
-                    yield (' '.join(tokens), namespace + '.' + body)
+                    yield (' '.join(tokens), (namespace + '.' + body).lstrip('.'))
                     continue
                 assert isinstance(body, dict)
 
@@ -255,11 +250,11 @@ class Tool(object):
             finally:
                 tokens = tokens[:-1]
 
-    def do_help(self,possible=None):
+    def do_help(self,possible=None, heading=None):
         if possible is None:
             possible = self.cmds
 
-        print("Valid commands:")
+        print(heading or "Valid commands:")
         w = max(len(p) for (_,p,_) in possible)
 
         for (_,p,c) in possible:
@@ -288,19 +283,21 @@ class Tool(object):
             try:
                 t = next(tokens)
             except:
-                raise IncompleteCommandError(prefix)
+                return self.handle_incomplete(prefix, possible)
 
-            if t in ('help','--help'):
+            if t in ('help','--help','-h'):
                 # do some help
                 self.do_help(possible)
                 return
 
             prefix.append(t)
 
-            possible = [(p,s,c) for (p,s,c) in possible if p[:len(prefix)] == prefix]
+            next_state = [(p,s,c) for (p,s,c) in possible if p[:len(prefix)] == prefix]
 
-            if not possible:
-                raise NoSuchCommandError(prefix)
+            if not next_state:
+                return self.handle_unrecognised(prefix, possible)
+
+            possible = next_state
 
 #        print "Found command '%s'" % (' '.join(prefix))
 
@@ -313,9 +310,27 @@ class Tool(object):
 
         target = resolve(target)
 
-        cmd = target()
+        cmd = target(name=' '.join(prefix))
 
         return cmd.main(cmdargv)
+
+    def handle_unrecognised(self, prefix, possible):
+        if prefix:
+            prefix = " ".join(prefix)
+            heading=f"Unrecognised command '{prefix}', valid options are:"
+        else:
+            heading = "Unrecognised command, valid options are:"
+
+        self.do_help(possible, heading=heading)
+
+    def handle_incomplete(self, prefix, possible):
+        if prefix:
+            prefix = " ".join(prefix)
+            heading = f"Incomplete command '{prefix}', could be one of:"
+        else:
+            heading = "Incomplete command, could be one of:"
+
+        self.do_help(possible, heading=heading)
 
 def resolve(name):
     """ Convert a dotted module path to an object """
