@@ -1,0 +1,4 @@
+# File doors.yaml
+_package: discovery.podbay.doors
+open: OpenCommand
+close: CloseCommand

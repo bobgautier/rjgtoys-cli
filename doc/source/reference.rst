@@ -1,5 +1,3 @@
-Reference
-=========
 
 .. automodule:: rjgtoys.cli
 

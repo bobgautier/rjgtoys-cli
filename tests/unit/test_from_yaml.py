@@ -2,6 +2,7 @@
 Tests for the yaml spec stuff.
 """
 
+import os
 import pytest
 
 from rjgtoys.cli import Tool, SpecificationError
@@ -80,4 +81,47 @@ def test_spec_validation():
         first:
           command: other
         """)
+
+
+def test_nest():
+    """Sublanguage nesting works as expected."""
+
+    spec = Tool.spec_from_yaml(text="""
+    _package: discovery
+    podbay:
+      _package: podbay
+      doors:
+        _package: doors
+        open: OpenCommand
+        close: CloseCommand
+      hatch:
+        _package: hatch
+        open: OpenCommand
+        close: CloseCommand
+    """)
+
+
+    assert spec == [
+        ('podbay doors open', 'discovery.podbay.doors.OpenCommand'),
+        ('podbay doors close', 'discovery.podbay.doors.CloseCommand'),
+        ('podbay hatch open', 'discovery.podbay.hatch.OpenCommand'),
+        ('podbay hatch close', 'discovery.podbay.hatch.CloseCommand')
+        ]
+
+
+def test_include_and_nest():
+    """Building sublanguages using !include works too."""
+
+    srcdir = os.path.dirname(__file__)
+
+    src = os.path.join(srcdir, 'podbay.yaml')
+
+    spec = Tool.spec_from_yaml(path=src)
+
+    assert spec == [
+        ('podbay doors open', 'discovery.podbay.doors.OpenCommand'),
+        ('podbay doors close', 'discovery.podbay.doors.CloseCommand'),
+        ('podbay hatch open', 'discovery.podbay.hatch.OpenCommand'),
+        ('podbay hatch close', 'discovery.podbay.hatch.CloseCommand')
+        ]
 

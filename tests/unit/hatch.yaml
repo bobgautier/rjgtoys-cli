@@ -1,0 +1,4 @@
+# File hatch.yaml
+_package: discovery.podbay.hatch
+open: OpenCommand
+close: CloseCommand

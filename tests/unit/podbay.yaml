@@ -1,0 +1,4 @@
+# File podbay.yaml
+podbay:
+  doors: !include doors.yaml
+  hatch: !include hatch.yaml

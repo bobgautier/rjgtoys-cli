@@ -1,9 +1,14 @@
 To-do List
 ==========
 
-Write some code
+Move the examples back into 'examples' where they won't mess up test stats.
 
-Write some tests
+Support for command completion.
 
-Write the docs
+Support for autogeneration of documentation.
+
+Better arg action components (and more consistent names!)
+
+Richer tool specifications, _title, _description etc.
+
 
