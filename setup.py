@@ -15,6 +15,7 @@ setup(
     namespace_packages=['rjgtoys'],
     packages = ['rjgtoys','rjgtoys.cli'],
     install_requires = [
+        'rjgtoys-xc'
     ],
     extras_require = {
     },
